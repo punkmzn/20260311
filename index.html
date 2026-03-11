@@ -461,6 +461,23 @@
             font-size: 1rem;
             margin: 0 0.25rem;
         }
+
+        .log-panel {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #ffb3b3;
+            text-align: left;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-panel .log-ok { color: #90ee90; }
+        .log-panel .log-err { color: #ff6b6b; }
     </style>
 </head>
 <body>
@@ -512,6 +529,8 @@
                 <!-- 10, 15, 19, 27, 30, 33 + 14 -->
             </div>
         </div>
+
+        <div class="log-panel" id="logPanel"></div>
     </div>
 
     <!-- Supabase 설정: 로컬 테스트용. Vercel에서는 환경변수로 자동 주입됨 -->
@@ -523,32 +542,57 @@
     <script>
         const ballColors = ['yellow', 'blue', 'red', 'gray', 'green'];
 
-        // Supabase 설정 (Vercel 배포 시 /api/config에서 가져오거나, 아래 직접 입력)
         let supabase = null;
+
+        function showLog(msg, isError) {
+            const el = document.getElementById('logPanel');
+            if (!el) return;
+            const p = document.createElement('p');
+            p.className = isError ? 'log-err' : 'log-ok';
+            p.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+            el.appendChild(p);
+            el.scrollTop = el.scrollHeight;
+        }
+
         async function initSupabase() {
+            showLog('Supabase 초기화 중...', false);
+            const apiUrl = window.location.origin + '/api/config';
             try {
-                const res = await fetch('/api/config');
+                showLog('API 요청: ' + apiUrl, false);
+                const res = await fetch(apiUrl);
+                showLog('API 응답 상태: ' + res.status + ' ' + res.statusText, false);
                 if (res.ok) {
-                    const { supabaseUrl, supabaseKey } = await res.json();
+                    const json = await res.json();
+                    const { supabaseUrl, supabaseKey } = json;
+                    showLog('API 응답 - URL존재:' + !!supabaseUrl + ', KEY존재:' + !!supabaseKey, false);
                     if (supabaseUrl && supabaseKey) {
                         supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                        showLog('Supabase 연결 성공 (API 환경변수 사용)', false);
                         return true;
                     }
+                    showLog('API에서 URL/KEY가 비어있음. Vercel 환경변수 확인 필요.', true);
+                } else {
+                    showLog('API 요청 실패: ' + res.status + ' - /api/config 라우트 확인', true);
                 }
-            } catch (e) { /* API 없으면 무시 */ }
-            // 직접 설정 (로컬용)
+            } catch (e) {
+                showLog('API fetch 오류: ' + (e.message || String(e)), true);
+            }
             const url = (window.SUPABASE_URL || '').trim();
             const key = (window.SUPABASE_ANON_KEY || '').trim();
             if (url && key && !url.includes('YOUR_PROJECT') && !key.includes('YOUR_ANON_KEY')) {
                 supabase = window.supabase.createClient(url, key);
+                showLog('Supabase 연결 성공 (window 직접 설정)', false);
                 return true;
             }
+            showLog('Supabase 연결 실패: URL/KEY 없음. Vercel env 또는 window 설정 필요.', true);
             return false;
         }
 
         async function saveLottoResult({ main, bonus }) {
             if (!supabase) {
-                alert('오류: Supabase에 연결되지 않았습니다.\nVercel 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)를 설정하세요.');
+                const msg = 'Supabase 연결 안됨. Vercel 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY) 설정 필요.';
+                showLog(msg, true);
+                alert('오류: ' + msg);
                 return;
             }
             try {
@@ -557,18 +601,22 @@
                     .insert([{ main_numbers: main, bonus_number: bonus }])
                     .select();
                 if (error) {
-                    console.error('Supabase 저장 실패:', error);
-                    alert('오류: Supabase 저장 실패\n' + (error.message || error.details || JSON.stringify(error)));
+                    const msg = '저장 실패: ' + (error.message || '') + (error.details ? ' | ' + error.details : '') + ' | code:' + (error.code || '');
+                    showLog(msg, true);
+                    alert('오류: Supabase 저장 실패\n' + msg);
                     return;
                 }
                 if (!data || data.length === 0) {
-                    alert('오류: Supabase에 데이터가 저장되지 않았습니다.');
+                    const msg = '저장 결과 없음 - RLS 또는 테이블 구조 확인';
+                    showLog(msg, true);
+                    alert('오류: ' + msg);
                     return;
                 }
-                console.log('Supabase 저장 완료:', data);
+                showLog('저장 완료: ' + JSON.stringify(data[0]), false);
             } catch (e) {
-                console.error('Supabase 오류:', e);
-                alert('오류: Supabase 저장 중 오류 발생\n' + (e.message || String(e)));
+                const msg = '예외: ' + (e.message || String(e));
+                showLog(msg, true);
+                alert('오류: ' + msg);
             }
         }
 
@@ -709,7 +757,9 @@
         }
 
         renderWinning2026();
-        initSupabase();
+        (async function init() {
+            await initSupabase();
+        })();
 
         document.getElementById('generateBtn').addEventListener('click', () => {
             const result = generateLottoNumbers();
