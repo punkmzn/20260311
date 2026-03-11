@@ -538,11 +538,11 @@
         window.SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
         window.SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         const ballColors = ['yellow', 'blue', 'red', 'gray', 'green'];
 
-        let supabase = null;
+        let supabaseClient = null;
 
         function showLog(msg, isError) {
             const el = document.getElementById('logPanel');
@@ -566,7 +566,7 @@
                     const { supabaseUrl, supabaseKey } = json;
                     showLog('API 응답 - URL존재:' + !!supabaseUrl + ', KEY존재:' + !!supabaseKey, false);
                     if (supabaseUrl && supabaseKey) {
-                        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                        supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
                         showLog('Supabase 연결 성공 (API 환경변수 사용)', false);
                         return true;
                     }
@@ -580,7 +580,7 @@
             const url = (window.SUPABASE_URL || '').trim();
             const key = (window.SUPABASE_ANON_KEY || '').trim();
             if (url && key && !url.includes('YOUR_PROJECT') && !key.includes('YOUR_ANON_KEY')) {
-                supabase = window.supabase.createClient(url, key);
+                supabaseClient = supabase.createClient(url, key);
                 showLog('Supabase 연결 성공 (window 직접 설정)', false);
                 return true;
             }
@@ -589,14 +589,14 @@
         }
 
         async function saveLottoResult({ main, bonus }) {
-            if (!supabase) {
+            if (!supabaseClient) {
                 const msg = 'Supabase 연결 안됨. Vercel 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY) 설정 필요.';
                 showLog(msg, true);
                 alert('오류: ' + msg);
                 return;
             }
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('lotto_results')
                     .insert([{ main_numbers: main, bonus_number: bonus }])
                     .select();
