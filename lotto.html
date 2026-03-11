@@ -1,0 +1,663 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로또 번호 추첨기 - MARVEL STYLE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Oswald', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #8b1a1a 0%, #6b0f0f 30%, #3d0a0a 70%, #1a0505 100%);
+            color: #fff;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255,255,255,0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 3rem;
+            border-radius: 4px;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 520px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-block {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .logo-main {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            background: #c41e3a;
+            color: #fff;
+            padding: 0.5rem 1.25rem;
+        }
+
+        .logo-sub {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+            color: #fff;
+            margin-left: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 2px solid #fff;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            letter-spacing: 0.2em;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2rem;
+            letter-spacing: 0.1em;
+        }
+
+        .numbers-display {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            min-height: 120px;
+            min-width: 320px;
+            perspective: 600px;
+        }
+
+        .placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.1em;
+        }
+
+        .ball {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transform-style: preserve-3d;
+            backface-visibility: visible;
+        }
+
+        .ball:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .ball.bonus {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+            background: linear-gradient(145deg, #c41e3a, #8b1a1a) !important;
+            color: #fff;
+            margin-left: 0.5rem;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .ball.draw-animate {
+            animation: ballDraw3D 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes ballDraw3D {
+            0% {
+                opacity: 0;
+                transform: translateZ(-300px) rotateX(-180deg) rotateY(-180deg) scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: translateZ(80px) rotateX(20deg) rotateY(20deg) scale(1.2);
+            }
+            100% {
+                opacity: 1;
+                transform: translateZ(0) rotateX(0) rotateY(0) scale(1);
+            }
+        }
+
+        /* 3D 추첨 오버레이 */
+        .draw-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .draw-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .draw-stage {
+            perspective: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .drum-container {
+            position: relative;
+            width: 280px;
+            height: 180px;
+            perspective: 800px;
+        }
+
+        .lotto-drum {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: drumSpin 3s ease-in-out infinite;
+        }
+
+        .drum-body {
+            position: absolute;
+            width: 240px;
+            height: 140px;
+            left: 50%;
+            top: 50%;
+            margin-left: -120px;
+            margin-top: -70px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(196, 30, 58, 0.3) 0%, rgba(60, 10, 10, 0.8) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transform: rotateX(15deg);
+            box-shadow: 
+                inset 0 0 40px rgba(0, 0, 0, 0.5),
+                0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .drum-body::before {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+
+        .drawing-ball {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 58px;
+            height: 58px;
+            margin-left: -29px;
+            margin-top: -29px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+            transform-style: preserve-3d;
+            opacity: 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 
+                inset -5px -5px 15px rgba(0, 0, 0, 0.3),
+                inset 5px 5px 15px rgba(255, 255, 255, 0.2),
+                0 0 30px rgba(255, 255, 255, 0.3);
+            animation: ballEmerge 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes ballEmerge {
+            0% {
+                opacity: 0;
+                transform: translateY(80px) translateZ(-100px) scale(0.1) rotateX(-90deg) rotateY(0deg);
+            }
+            25% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(-100px) translateZ(0) scale(1) rotateX(0deg) rotateY(720deg);
+            }
+        }
+
+        @keyframes drumSpin {
+            0%, 100% { transform: rotateY(0deg) rotateX(5deg); }
+            50% { transform: rotateY(180deg) rotateX(5deg); }
+        }
+
+        .drum-balls-mix {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 100px;
+            height: 100px;
+            margin-left: -50px;
+            margin-top: -50px;
+            transform-style: preserve-3d;
+        }
+
+        .mix-ball {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            animation: mixFloat 2s ease-in-out infinite;
+            opacity: 0.7;
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.3);
+        }
+
+        .mix-ball:nth-child(1) { left: 15px; top: 15px; animation-delay: 0s; background: linear-gradient(145deg, #d4a84b, #b8860b); }
+        .mix-ball:nth-child(2) { left: 55px; top: 8px; animation-delay: 0.2s; background: linear-gradient(145deg, #4a6fa5, #2c5282); }
+        .mix-ball:nth-child(3) { left: 85px; top: 25px; animation-delay: 0.4s; background: linear-gradient(145deg, #c41e3a, #8b1a1a); }
+        .mix-ball:nth-child(4) { left: 25px; top: 55px; animation-delay: 0.6s; background: linear-gradient(145deg, #6b7280, #4b5563); }
+        .mix-ball:nth-child(5) { left: 65px; top: 65px; animation-delay: 0.8s; background: linear-gradient(145deg, #4a7c59, #2d5a3d); }
+
+        @keyframes mixFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(5px, -5px) scale(1.1); }
+        }
+
+        .draw-result-area {
+            min-height: 100px;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            perspective: 800px;
+            transform-style: preserve-3d;
+        }
+
+        .draw-status {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 0.3em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+        }
+
+        .draw-status.counting {
+            animation: statusPulse 0.5s ease infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ball.yellow,
+        .drawing-ball.yellow { background: linear-gradient(145deg, #d4a84b, #b8860b); }
+        .ball.blue,
+        .drawing-ball.blue { background: linear-gradient(145deg, #4a6fa5, #2c5282); }
+        .ball.red,
+        .drawing-ball.red { background: linear-gradient(145deg, #c41e3a, #8b1a1a); }
+        .ball.gray,
+        .drawing-ball.gray { background: linear-gradient(145deg, #6b7280, #4b5563); }
+        .ball.green,
+        .drawing-ball.green { background: linear-gradient(145deg, #4a7c59, #2d5a3d); }
+        .drawing-ball.bonus { background: linear-gradient(145deg, #c41e3a, #8b1a1a) !important; }
+
+        .generate-btn {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            padding: 1rem 2.5rem;
+            border: 2px solid #fff;
+            border-radius: 2px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            background: #c41e3a;
+            border-color: #c41e3a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(196, 30, 58, 0.5);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .history {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .history h3 {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1rem;
+            letter-spacing: 0.15em;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .history-item .mini-ball {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .history-item .bonus-mini {
+            background: linear-gradient(145deg, #c41e3a, #8b1a1a) !important;
+            color: #fff;
+        }
+
+        .winning-2026 {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .winning-2026 h3 {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.15em;
+        }
+
+        .winning-2026 .draw-info {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .winning-2026 .numbers-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .winning-2026 .ball {
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+        }
+
+        .winning-2026 .ball.bonus {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+        }
+
+        .winning-2026 .plus {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1rem;
+            margin: 0 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D 추첨 연출 오버레이 -->
+    <div class="draw-overlay" id="drawOverlay">
+        <div class="draw-stage">
+            <div class="draw-status" id="drawStatus">추첨 준비중...</div>
+            <div class="drum-container">
+                <div class="lotto-drum">
+                    <div class="drum-body">
+                        <div class="drum-balls-mix">
+                            <div class="mix-ball"></div>
+                            <div class="mix-ball"></div>
+                            <div class="mix-ball"></div>
+                            <div class="mix-ball"></div>
+                            <div class="mix-ball"></div>
+                        </div>
+                        <div class="drawing-ball" id="drawingBall"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="draw-result-area" id="drawResultArea"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="logo-block">
+            <span class="logo-main">LOTTO</span>
+            <span class="logo-sub">LUCKY</span>
+        </div>
+        <h1>행운의 번호를 뽑아라</h1>
+        <p class="subtitle">1 ~ 45</p>
+
+        <div class="numbers-display" id="numbersDisplay">
+            <span class="placeholder">버튼을 눌러 번호를 추첨하세요</span>
+        </div>
+
+        <button class="generate-btn" id="generateBtn">추첨하기</button>
+
+        <div class="history">
+            <h3>추첨 기록</h3>
+            <div id="historyList"></div>
+        </div>
+
+        <div class="winning-2026">
+            <h3>2026년 1등 당첨번호</h3>
+            <p class="draw-info">제1214회 (2026.03.07 추첨)</p>
+            <div class="numbers-row" id="winning2026Numbers">
+                <!-- 10, 15, 19, 27, 30, 33 + 14 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ballColors = ['yellow', 'blue', 'red', 'gray', 'green'];
+
+        // 2026년 제1214회 1등 당첨번호
+        const WINNING_2026 = { main: [10, 15, 19, 27, 30, 33], bonus: 14 };
+
+        function getBallColor(num) {
+            if (num <= 10) return 'yellow';
+            if (num <= 20) return 'blue';
+            if (num <= 30) return 'red';
+            if (num <= 40) return 'gray';
+            return 'green';
+        }
+
+        function generateLottoNumbers() {
+            const numbers = new Set();
+            while (numbers.size < 6) {
+                numbers.add(Math.floor(Math.random() * 45) + 1);
+            }
+            const mainNumbers = Array.from(numbers).sort((a, b) => a - b);
+            let bonus;
+            do {
+                bonus = Math.floor(Math.random() * 45) + 1;
+            } while (mainNumbers.includes(bonus));
+
+            return { main: mainNumbers, bonus };
+        }
+
+        function createBall(num, isBonus = false) {
+            const ball = document.createElement('div');
+            ball.className = `ball ${getBallColor(num)}${isBonus ? ' bonus' : ''}`;
+            ball.textContent = num;
+            return ball;
+        }
+
+        function displayNumbers({ main, bonus }) {
+            const display = document.getElementById('numbersDisplay');
+            display.innerHTML = '';
+
+            main.forEach(num => {
+                display.appendChild(createBall(num));
+            });
+            display.appendChild(createBall(bonus, true));
+        }
+
+        function addToHistory({ main, bonus }) {
+            const historyList = document.getElementById('historyList');
+            const item = document.createElement('div');
+            item.className = 'history-item';
+
+            main.forEach(num => {
+                const mini = document.createElement('span');
+                mini.className = `mini-ball ${getBallColor(num)}`;
+                mini.textContent = num;
+                item.appendChild(mini);
+            });
+
+            const bonusMini = document.createElement('span');
+            bonusMini.className = 'mini-ball bonus-mini';
+            bonusMini.textContent = `+${bonus}`;
+            item.appendChild(bonusMini);
+
+            historyList.insertBefore(item, historyList.firstChild);
+
+            const items = historyList.querySelectorAll('.history-item');
+            if (items.length > 5) {
+                items[items.length - 1].remove();
+            }
+        }
+
+        async function run3DDraw(result) {
+            const overlay = document.getElementById('drawOverlay');
+            const drawStatus = document.getElementById('drawStatus');
+            const drawingBall = document.getElementById('drawingBall');
+            const resultArea = document.getElementById('drawResultArea');
+            const generateBtn = document.getElementById('generateBtn');
+
+            generateBtn.disabled = true;
+            overlay.classList.add('active');
+            resultArea.innerHTML = '';
+            drawStatus.textContent = '추첨 준비중...';
+            drawStatus.classList.add('counting');
+
+            await new Promise(r => setTimeout(r, 800));
+
+            const allNumbers = [...result.main, result.bonus];
+            const isBonus = i => i === 6;
+
+            for (let i = 0; i < allNumbers.length; i++) {
+                const num = allNumbers[i];
+                const bonus = isBonus(i);
+
+                drawStatus.textContent = bonus ? '보너스 번호!' : `${i + 1}번째 번호 추첨중...`;
+                drawStatus.classList.add('counting');
+
+                drawingBall.textContent = num;
+                drawingBall.className = `drawing-ball ${getBallColor(num)}${bonus ? ' bonus' : ''}`;
+                drawingBall.style.animation = 'none';
+                drawingBall.offsetHeight;
+                drawingBall.style.animation = 'ballEmerge 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+
+                await new Promise(r => setTimeout(r, 1000));
+
+                const resultBall = createBall(num, bonus);
+                resultBall.classList.add('draw-animate');
+                resultBall.style.animationDelay = '0s';
+                resultArea.appendChild(resultBall);
+
+                drawingBall.style.animation = 'none';
+                drawingBall.style.opacity = '0';
+
+                await new Promise(r => setTimeout(r, 600));
+            }
+
+            drawStatus.classList.remove('counting');
+            drawStatus.textContent = '추첨 완료!';
+
+            await new Promise(r => setTimeout(r, 1500));
+
+            overlay.classList.remove('active');
+            generateBtn.disabled = false;
+            displayNumbers(result);
+            addToHistory(result);
+        }
+
+        function renderWinning2026() {
+            const container = document.getElementById('winning2026Numbers');
+            container.innerHTML = '';
+            WINNING_2026.main.forEach(num => {
+                container.appendChild(createBall(num, false));
+            });
+            const plus = document.createElement('span');
+            plus.className = 'plus';
+            plus.textContent = '+';
+            container.appendChild(plus);
+            container.appendChild(createBall(WINNING_2026.bonus, true));
+        }
+
+        renderWinning2026();
+
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const result = generateLottoNumbers();
+            run3DDraw(result);
+        });
+    </script>
+</body>
+</html>
