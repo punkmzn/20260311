@@ -548,7 +548,7 @@
 
         async function saveLottoResult({ main, bonus }) {
             if (!supabase) {
-                alert('Supabase 연결 실패: URL/키가 설정되지 않았습니다. Vercel 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)를 확인하세요.');
+                alert('오류: Supabase에 연결되지 않았습니다.\nVercel 환경변수(SUPABASE_URL, SUPABASE_ANON_KEY)를 설정하세요.');
                 return;
             }
             try {
@@ -558,13 +558,17 @@
                     .select();
                 if (error) {
                     console.error('Supabase 저장 실패:', error);
-                    alert('Supabase 저장 오류: ' + (error.message || JSON.stringify(error)));
+                    alert('오류: Supabase 저장 실패\n' + (error.message || error.details || JSON.stringify(error)));
+                    return;
+                }
+                if (!data || data.length === 0) {
+                    alert('오류: Supabase에 데이터가 저장되지 않았습니다.');
                     return;
                 }
                 console.log('Supabase 저장 완료:', data);
             } catch (e) {
                 console.error('Supabase 오류:', e);
-                alert('Supabase 오류: ' + (e.message || String(e)));
+                alert('오류: Supabase 저장 중 오류 발생\n' + (e.message || String(e)));
             }
         }
 
